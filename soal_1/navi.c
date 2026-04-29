@@ -35,8 +35,17 @@ int main() {
     server.sin_port = htons(PORT);
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    connect(sock, (struct sockaddr*)&server, sizeof(server));
+    if (connect(sock, (struct sockaddr*)&server, sizeof(server)) < 0) {
+    printf("Connection Failed\n");
+    close(sock);
+    return 1;
+}
 
+    if (sock < 0) {
+    printf("Socket error\n");
+    return 1;
+}
+  
     printf("Enter your name: ");
     fflush(stdout);
 
