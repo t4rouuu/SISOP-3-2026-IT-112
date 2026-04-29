@@ -3,14 +3,31 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <signal.h>
 #include "protocol.h"
 
 #define PORT 8080
 
+int sock;
+int exiting = 0;
+
+/* =========================
+   CTRL+C HANDLE
+========================= */
+void handle_sigint(int sig) {
+    char msg[] = "4\n";
+    send(sock, msg, strlen(msg), 0);
+    exiting = 1;
+}
+
+/* =========================
+   MAIN
+========================= */
 int main() {
-    int sock;
     struct sockaddr_in server;
     char buffer[BUFFER_SIZE];
+
+    signal(SIGINT, handle_sigint);
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -37,6 +54,9 @@ int main() {
 
         select(sock + 1, &readfds, NULL, NULL, NULL);
 
+        /* =========================
+           INPUT USER
+        ========================= */
         if (FD_ISSET(0, &readfds)) {
             fgets(buffer, sizeof(buffer), stdin);
             buffer[strcspn(buffer, "\n")] = 0;
@@ -44,10 +64,14 @@ int main() {
 
             send(sock, buffer, strlen(buffer), 0);
 
-            if (strcmp(buffer, "/exit\n") == 0)
-                break;
+            if (strcmp(buffer, "/exit\n") == 0) {
+                exiting = 1;
+            }
         }
 
+        /* =========================
+           OUTPUT SERVER
+        ========================= */
         if (FD_ISSET(sock, &readfds)) {
             int val = read(sock, buffer, sizeof(buffer) - 1);
 
@@ -59,6 +83,10 @@ int main() {
             buffer[val] = '\0';
             printf("%s", buffer);
             fflush(stdout);
+
+            if (exiting) {
+                break; // 🔥 keluar SETELAH pesan tampil
+            }
         }
     }
 

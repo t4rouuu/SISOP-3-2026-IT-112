@@ -112,7 +112,9 @@ int main() {
         for (int i = 0; i <= fdmax; i++) {
             if (!FD_ISSET(i, &read_fds)) continue;
 
-            /* NEW CONNECTION */
+            /* =========================
+               NEW CONNECTION
+            ========================= */
             if (i == server_fd) {
                 new_socket = accept(server_fd, NULL, NULL);
                 FD_SET(new_socket, &master_set);
@@ -127,7 +129,9 @@ int main() {
                 }
             }
 
-            /* CLIENT MESSAGE */
+            /* =========================
+               CLIENT MESSAGE
+            ========================= */
             else {
                 char buffer[BUFFER_SIZE];
                 int val = read(i, buffer, sizeof(buffer) - 1);
@@ -150,7 +154,9 @@ int main() {
                 buffer[val] = '\0';
                 trim(buffer);
 
-                /* PASSWORD MODE */
+                /* =========================
+                   PASSWORD MODE
+                ========================= */
                 if (clients[idx].waiting_password) {
                     if (strcmp(buffer, "protocol7") == 0) {
                         clients[idx].is_admin = 1;
@@ -170,7 +176,9 @@ int main() {
                     continue;
                 }
 
-                /* LOGIN */
+                /* =========================
+                   LOGIN
+                ========================= */
                 if (!clients[idx].logged_in) {
 
                     if (strlen(buffer) == 0) {
@@ -178,7 +186,6 @@ int main() {
                         continue;
                     }
 
-                    // ADMIN CHECK
                     if (strcasecmp(buffer, "the knights") == 0) {
                         clients[idx].waiting_password = 1;
                         send(i, "Enter Password: ", 16, 0);
@@ -208,9 +215,13 @@ int main() {
                     continue;
                 }
 
-                /* EXIT */
+                /* =========================
+                   EXIT
+                ========================= */
                 if (strcmp(buffer, "/exit") == 0) {
                     send(i, "[System] Disconnecting from The Wired...\n", 43, 0);
+
+                    usleep(100000); // 🔥 FIX
 
                     char logmsg[128];
                     snprintf(logmsg, sizeof(logmsg),
@@ -224,11 +235,10 @@ int main() {
                     continue;
                 }
 
-                /* ADMIN MODE */
+                /* =========================
+                   ADMIN MODE
+                ========================= */
                 if (clients[idx].is_admin) {
-
-                    if (strncmp(buffer, "^C", 2) == 0)
-                        strcpy(buffer, "4");
 
                     if (strcmp(buffer, "1") == 0) {
                         int count = 0;
@@ -264,6 +274,9 @@ int main() {
 
                     else if (strcmp(buffer, "4") == 0) {
                         send(i, "[System] Disconnecting from The Wired...\n", 43, 0);
+
+                        usleep(100000); // 🔥 FIX
+
                         close(i);
                         FD_CLR(i, &master_set);
                         reset_client(&clients[idx]);
@@ -274,19 +287,19 @@ int main() {
                     continue;
                 }
 
-                /* CHAT */
+                /* =========================
+                   CHAT
+                ========================= */
                 char msg[BUFFER_SIZE];
                 char logmsg[BUFFER_SIZE];
 
-                // untuk broadcast (boleh ada \n)
                 snprintf(msg, sizeof(msg),
-                "[%.50s]: %.900s\n",
-                clients[idx].name, buffer);
+                         "[%.50s]: %.900s\n",
+                         clients[idx].name, buffer);
 
-                // untuk log (TANPA \n)
                 snprintf(logmsg, sizeof(logmsg),
-                "[%.50s]: %.900s",
-                clients[idx].name, buffer);
+                         "[%.50s]: %.900s",
+                         clients[idx].name, buffer);
 
                 broadcast(msg, i);
                 log_event("User", logmsg);
